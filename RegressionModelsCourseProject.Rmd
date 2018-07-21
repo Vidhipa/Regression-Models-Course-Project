@@ -7,7 +7,7 @@ output:
   html_document: default
 ---
 
-# Overview
+# Executive Summary
 
 Our work for Motor Trend, a magazine about the automobile industry. Looking at a data set of a collection of cars, they are interested in exploring the relationship between a set of variables and miles per gallon (MPG) (outcome). They are particularly interested in the following two questions:
 
@@ -28,29 +28,54 @@ data(mtcars)
 
 ## Compute summary statistics of data subsets:
 
+First, let's check the average.
 ```{r}
 aggregate(mpg ~ factor(am, labels = c("AT", "MT")), mtcars, mean)
 ```
+The MT car seems to have a higher MPG.
+We can see from the boxplot (*Appendix Fig.1 am vs mpg*) that Manual Transmission provides better MPG. 
 
-## Compute correlation:
+## Calculate correlation:
+
+Calculate the correlation to see the relationship with other elements.
 
 ```{r}
 round(cor(mtcars), 2)[1, ]
 ```
+`wt`, `disp`, `cyl` and `hp` show high correlation.
 
-## Fit multiple models
+## Fit Multiple Regression Models
 
 ```{r}
 fit1 <- lm(mpg ~ am, mtcars)
 fit2 <- lm(mpg ~ am + wt, mtcars)
-fit3 <- lm(mpg ~ am + wt + hp, mtcars)
-fit4 <- lm(mpg ~ am + wt + hp + disp, mtcars)
-fit5 <- lm(mpg ~ am + wt + hp + disp + cyl, mtcars)
+fit3 <- lm(mpg ~ am + wt + disp, mtcars)
+fit4 <- lm(mpg ~ am + wt + disp + cyl, mtcars)
+fit5 <- lm(mpg ~ am + wt + disp + cyl + hp, mtcars)
 ```
 
 ```{r}
 anova(fit1, fit2, fit3, fit4, fit5)
 ```
+
+The **Model 4** p-value is near 0.005, so we will not reject the hypothesis. Model 4 (`fit4`) will fit better.
+
+```{r}
+betterFit <- fit4
+summary(betterFit)
+```
+
+This Multivariable Regression test now gives us an R-squared value of over .83, suggesting that 83% or more of variance can be explained by the multivariable model. P-values for `cyl` and `wt` are below 5%, suggesting that these are confounding variables in the relation between car Transmission and MPG. (Appendix Fig.1)
+
+## Residual and Diagnostics
+
+In the next section, we examine residual plots of our regression model and also compute some of the regression diagnostics of our model to uncover outliers in the data set.
+
+From Appendix Fig.2, we can make the following observations,
+
+- The points in the Residuals vs Fitted plot seem to be randomly scattered on the plot and verify the independence condition.
+- The Normal Q-Q plot consists of the points which mostly fall on the line indicating that the residuals are normally distributed.
+- The Scale-Location plot consists of points scattered in a constant band pattern, indicating constant variance.
 
 # Appendix
 
@@ -58,29 +83,29 @@ anova(fit1, fit2, fit3, fit4, fit5)
 ```{r, message=FALSE}
 # Factorize
 mtcars$am <- factor(mtcars$am, labels = c("AT", "MT"))
-ggpairs(mtcars[, c(1, 9, 6, 4)], aes(color = am, alpha = .4))
+ggpairs(mtcars[, c(1, 9, 2, 6)], aes(color = am, alpha = .4))
 ```
 
 ## Fig. 2
 ```{r, message=FALSE}
 # Residuals vs Fitted
-plot1 <- ggplot(fit3, aes(.fitted, .resid)) +
+plot1 <- ggplot(betterFit, aes(.fitted, .resid)) +
         geom_point() +
         geom_hline(yintercept = 0) +
         geom_smooth(se = FALSE) +
         ggtitle("Residuals vs Fitted")
 # Normal Q-Q
-plot2 <- ggplot(fit3) +
+plot2 <- ggplot(betterFit) +
         stat_qq(aes(sample = .stdresid)) +
         geom_abline() +
         ggtitle("Normal Q-Q")
 # Scale-Location
-plot3 <- ggplot(fit3, aes(.fitted, sqrt(abs(.stdresid)))) +
+plot3 <- ggplot(betterFit, aes(.fitted, sqrt(abs(.stdresid)))) +
         geom_point() +
         geom_smooth(se = FALSE) +
         ggtitle("Scale-Location")
 # Standardized Residuals vs Leverage
-plot4 <- ggplot(fit3, aes(.hat, .stdresid)) +
+plot4 <- ggplot(betterFit, aes(.hat, .stdresid)) +
         geom_point(aes(size = .cooksd)) +
         geom_smooth(se = FALSE) +
         ggtitle("Residuals vs Leverage")
